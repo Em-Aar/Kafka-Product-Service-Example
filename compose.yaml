@@ -1,0 +1,78 @@
+version: "3.8"
+
+services:
+  app-todo:
+    build:
+      context: ./todo_service
+      dockerfile: Dockerfile
+    container_name: todo-app
+    depends_on:
+      - broker
+    ports:
+      - 8000:8000
+
+  app-db:
+    build:
+      context: ./db-service
+      dockerfile: Dockerfile
+    container_name: pgdb-app
+    depends_on:
+      - broker
+      - pg_db
+    ports:
+      - 8001:8001
+
+  broker:
+    image: apache/kafka:3.7.0
+    hostname: broker
+    container_name: broker
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_LISTENERS: "CONTROLLER://:29093,PLAINTEXT_HOST://0.0.0.0:9092,PLAINTEXT://:19092"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT_HOST://localhost:9092,PLAINTEXT://broker:19092"
+      KAFKA_PROCESS_ROLES: "broker,controller"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@broker:29093"
+      CLUSTER_ID: "4L6g3nShT-eMCtK--X86sw"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_LOG_DIRS: "/tmp/kraft-combined-logs"
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui
+    container_name: kafka-ui
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: "Local Kafka Cluster"
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: "broker:19092"
+      DYNAMIC_CONFIG_ENABLED: "true"
+    depends_on:
+      - broker
+
+  pg_db:
+    image: postgres:latest
+    restart: always
+    container_name: PostgresCont
+    environment:
+      - POSTGRES_USER=username
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=dbconttest
+    ports:
+      - 5433:5432
+    volumes:
+      - db_cont_test:/var/lib/postgresql/data
+
+networks:
+  default:
+    driver: bridge
+
+volumes:
+  db_cont_test:
+    driver: local

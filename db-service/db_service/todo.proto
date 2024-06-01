@@ -1,0 +1,6 @@
+syntax = "proto3";
+
+
+message Todo {
+  string content = 1;
+}
